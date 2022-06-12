@@ -1,4 +1,4 @@
-# Rich or broke (Alfa Bank test task)
+# Rich or Broke (Alfa Bank test task)
 ## Brief description
 Mini-project, a service that returns a gif corresponding to the currencies rate change. If the rate of currency raised, compared to yesterday, the service returns a random "rich" gif, otherwise returns "broke" gif. All of the requests are handled on the endpoint of the following format:
 
@@ -26,3 +26,10 @@ Configuration file is stored in [config/config.json](https://github.com/Ghytro/r
 All of the config parameters are necessary for the service.
 
 ## How to launch
+### Build from scratch (needs Go compiler and Redis server to be installed)
+- Install Redis: [installation guide](https://redis.io/docs/getting-started/)
+- Build the service executable
+    1. Clone this repository on your machine via https: ```git clone https://github.com/Ghytro/rich-or-broke.git```
+    2. Go to the root of the module and build the executable (you can specify the name of the executable by adding ```-o``` flag): ```cd rich-or-broke && go build -o executable```
+    3. Specify configuration parameters in config/config.json
+    4. Run the executable when your Redis is ready: ```./executable```

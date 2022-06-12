@@ -1,0 +1,13 @@
+{
+    "port": 8080,
+    "openexchange_api_token": "open exchange api token",
+    "openexchange_base_url": "https://openexchangerates.org/api/",
+    "tenor_api_token": "tenor api token",
+    "tenor_base_url": "https://g.tenor.com/v1/",
+    "redis_client_options": {
+        "db": 0,
+        "addr": "127.0.0.1:6379",
+        "password": ""
+    },
+    "base_currency_id": "USD"
+}

@@ -16,6 +16,7 @@ import (
 
 var errNoGifIdsInCache = errors.New("no gif ids found in cache")
 var errNoGifInCache = errors.New("no gif with the given id in cache")
+var ErrIncorrectTenorToken = errors.New("incorrect token provided to tenor api")
 
 var redisClient = redis.NewClient(&redis.Options{
 	DB:       config.Config.RedisClientOptions.DB,
@@ -61,6 +62,10 @@ func getSearchQueryGifIdsFromApi(searchQuery string) ([]string, error) {
 	)
 	if err != nil {
 		return nil, err
+	}
+	switch resp.StatusCode {
+	case http.StatusUnauthorized:
+		return nil, ErrIncorrectTenorToken
 	}
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {

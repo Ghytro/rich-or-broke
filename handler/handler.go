@@ -49,6 +49,8 @@ func DiffHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			if err == errIncorrectCurrencyCode {
 				w.WriteHeader(http.StatusNotFound)
+			} else if err == openexchange.ErrIncorrectOpenExchangeToken {
+				w.WriteHeader(http.StatusUnauthorized)
 			} else {
 				w.WriteHeader(http.StatusInternalServerError)
 			}

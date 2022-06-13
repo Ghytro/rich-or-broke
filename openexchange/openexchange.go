@@ -13,9 +13,10 @@ import (
 	"github.com/go-redis/redis"
 )
 
-var errIncorrectDate = errors.New("incorrect date")
-var errIncorrectBaseCurrency = errors.New("incorrect base currency")
-var errNoRatesDataInCache = errors.New("no rates data in cache by given date and base")
+var ErrIncorrectDate = errors.New("incorrect date")
+var ErrIncorrectBaseCurrency = errors.New("incorrect base currency")
+var ErrNoRatesDataInCache = errors.New("no rates data in cache by given date and base")
+var ErrIncorrectOpenExchangeToken = errors.New("incorrect access token provided to openexchange")
 
 var redisClient = redis.NewClient(&redis.Options{
 	DB:       config.Config.RedisClientOptions.DB,
@@ -30,7 +31,7 @@ func getHistoricalRatesFromCache(date string, base string) (map[string]float64, 
 		return nil, err
 	}
 	if len(cacheData) == 0 {
-		return nil, errNoRatesDataInCache
+		return nil, ErrNoRatesDataInCache
 	}
 	result := make(map[string]float64)
 	for k, v := range cacheData {
@@ -73,9 +74,11 @@ func getHistoricalRatesFromApi(date string, base string) (map[string]float64, er
 	}
 	switch resp.StatusCode {
 	case http.StatusForbidden:
-		return nil, errIncorrectBaseCurrency
+		return nil, ErrIncorrectBaseCurrency
 	case http.StatusBadRequest:
-		return nil, errIncorrectDate
+		return nil, ErrIncorrectDate
+	case http.StatusUnauthorized:
+		return nil, ErrIncorrectOpenExchangeToken
 	}
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -102,7 +105,7 @@ func HistoricalRates(timestamp time.Time, base string) (map[string]float64, erro
 	date := timestamp.Format("2006-01-02")
 	rates, err := getHistoricalRatesFromCache(date, base)
 	if err != nil {
-		if err == errNoRatesDataInCache {
+		if err == ErrNoRatesDataInCache {
 			rates, err = getHistoricalRatesFromApi(date, base)
 			if err != nil {
 				return nil, err

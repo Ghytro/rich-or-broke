@@ -1,6 +1,8 @@
 package common
 
-import "errors"
+import (
+	"errors"
+)
 
 var errIncorrectCurrency = errors.New("incorrect currency code")
 

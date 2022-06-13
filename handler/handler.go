@@ -73,6 +73,6 @@ func DiffHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
+	w.Header().Set("Content-Type", "image/gif")
 	w.Write(gif.BinaryContent)
 }

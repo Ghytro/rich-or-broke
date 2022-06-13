@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Ghytro/ab_interview/common"
 	"github.com/Ghytro/ab_interview/config"
 	"github.com/go-redis/redis"
 )
@@ -19,9 +20,10 @@ var ErrNoRatesDataInCache = errors.New("no rates data in cache by given date and
 var ErrIncorrectOpenExchangeToken = errors.New("incorrect access token provided to openexchange")
 
 var redisClient = redis.NewClient(&redis.Options{
-	DB:       config.Config.RedisClientOptions.DB,
-	Password: config.Config.RedisClientOptions.Password,
-	Addr:     config.Config.RedisClientOptions.Addr,
+	DB:          config.Config.RedisClientOptions.DB,
+	Password:    config.Config.RedisClientOptions.Password,
+	Addr:        config.Config.RedisClientOptions.Addr,
+	ReadTimeout: time.Millisecond * 100,
 })
 
 func getHistoricalRatesFromCache(date string, base string) (map[string]float64, error) {
@@ -103,17 +105,25 @@ func getHistoricalRatesFromApi(date string, base string) (map[string]float64, er
 
 func HistoricalRates(timestamp time.Time, base string) (map[string]float64, error) {
 	date := timestamp.Format("2006-01-02")
+	if !common.IsRedisAvailable() {
+		return getHistoricalRatesFromApi(date, base)
+	}
 	rates, err := getHistoricalRatesFromCache(date, base)
 	if err != nil {
-		if err == ErrNoRatesDataInCache {
+		switch {
+		case common.IsBadRedisConnectionErr(err):
+			common.SetRedisUnavailable()
+			return getHistoricalRatesFromApi(date, base)
+		case err == ErrNoRatesDataInCache:
 			rates, err = getHistoricalRatesFromApi(date, base)
 			if err != nil {
 				return nil, err
 			}
 			addRateToCache(date, base, rates)
 			return rates, nil
+		default:
+			return nil, err
 		}
-		return nil, err
 	}
 	return rates, nil
 }

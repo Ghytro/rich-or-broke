@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Ghytro/ab_interview/common"
 	"github.com/Ghytro/ab_interview/config"
 	"github.com/go-redis/redis"
 )
@@ -19,9 +20,10 @@ var errNoGifInCache = errors.New("no gif with the given id in cache")
 var ErrIncorrectTenorToken = errors.New("incorrect token provided to tenor api")
 
 var redisClient = redis.NewClient(&redis.Options{
-	DB:       config.Config.RedisClientOptions.DB,
-	Password: config.Config.RedisClientOptions.Password,
-	Addr:     config.Config.RedisClientOptions.Addr,
+	DB:          config.Config.RedisClientOptions.DB,
+	Password:    config.Config.RedisClientOptions.Password,
+	Addr:        config.Config.RedisClientOptions.Addr,
+	ReadTimeout: time.Millisecond * 100,
 })
 
 type Gif struct {
@@ -99,7 +101,7 @@ func getSearchQueryGifIdsFromApi(searchQuery string) ([]string, error) {
 func getRandomGifId(searchQuery string) (string, error) {
 	gifId, err := getRandomGifIdFromCache(searchQuery)
 	if err != nil {
-		if err == errNoGifIdsInCache {
+		if err == errNoGifIdsInCache || common.IsBadRedisConnectionErr(err) {
 			gifIds, err := getSearchQueryGifIdsFromApi(searchQuery)
 			if err != nil {
 				return "", err
@@ -152,17 +154,25 @@ func getGifByIdFromTenorApi(gifId string) (*Gif, error) {
 }
 
 func getGifById(gifId string) (*Gif, error) {
+	if !common.IsRedisAvailable() {
+		return getGifByIdFromTenorApi(gifId)
+	}
 	gif, err := getGifByIdFromCache(gifId)
 	if err != nil {
-		if err == errNoGifInCache {
+		switch {
+		case common.IsBadRedisConnectionErr(err):
+			common.SetRedisUnavailable()
+			return getGifByIdFromTenorApi(gifId)
+		case err == errNoGifIdsInCache:
 			gif, err = getGifByIdFromTenorApi(gifId)
 			if err != nil {
 				return nil, err
 			}
 			addGifToCache(gifId, gif)
 			return gif, nil
+		default:
+			return nil, err
 		}
-		return nil, err
 	}
 	return gif, nil
 }

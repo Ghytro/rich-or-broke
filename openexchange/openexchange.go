@@ -5,18 +5,17 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"strconv"
 	"time"
 
-	"github.com/Ghytro/ab_interview/common"
 	"github.com/Ghytro/ab_interview/config"
 	"github.com/go-redis/redis"
 )
 
 var errIncorrectDate = errors.New("incorrect date")
 var errIncorrectBaseCurrency = errors.New("incorrect base currency")
+var errNoRatesDataInCache = errors.New("no rates data in cache by given date and base")
 
 var redisClient = redis.NewClient(&redis.Options{
 	DB:       config.Config.RedisClientOptions.DB,
@@ -24,17 +23,42 @@ var redisClient = redis.NewClient(&redis.Options{
 	Addr:     config.Config.RedisClientOptions.Addr,
 })
 
-func init() {
-	if redisClient == nil {
-		log.Fatal("redis client is nil")
+func getHistoricalRatesFromCache(date string, base string) (map[string]float64, error) {
+	redisCacheKey := fmt.Sprintf("openexchange_cache:%s:%s", date, base)
+	cacheData, err := redisClient.HGetAll(redisCacheKey).Result()
+	if err != nil {
+		return nil, err
 	}
-	if err := redisClient.Ping().Err(); err != nil {
-		log.Fatal(err)
+	if len(cacheData) == 0 {
+		return nil, errNoRatesDataInCache
 	}
+	result := make(map[string]float64)
+	for k, v := range cacheData {
+		f, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			return nil, err
+		}
+		result[k] = f
+	}
+	return result, nil
 }
 
-func getHistoricalRates(timestamp time.Time, base string) (map[string]float64, error) {
-	date := timestamp.Format("2006-01-02")
+func addRateToCache(date, base string, rates map[string]float64) error {
+	redisRates := make(map[string]interface{})
+	for k, v := range rates {
+		redisRates[k] = interface{}(v)
+	}
+	redisPipe := redisClient.Pipeline()
+	redisCacheKey := fmt.Sprintf("openexchange_cache:%s:%s", date, base)
+	redisPipe.HMSet(redisCacheKey, redisRates)
+	redisPipe.Expire(redisCacheKey, 10*time.Minute)
+	if _, err := redisPipe.Exec(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func getHistoricalRatesFromApi(date string, base string) (map[string]float64, error) {
 	resp, err := http.Get(
 		fmt.Sprintf(
 			"%shistorical/%s.json?app_id=%s&base=%s",
@@ -76,39 +100,17 @@ func getHistoricalRates(timestamp time.Time, base string) (map[string]float64, e
 
 func HistoricalRates(timestamp time.Time, base string) (map[string]float64, error) {
 	date := timestamp.Format("2006-01-02")
-	redisCacheKey := fmt.Sprintf("openexchange_cache:%s:%s", date, base)
-	cacheData, err := redisClient.HGetAll(redisCacheKey).Result()
+	rates, err := getHistoricalRatesFromCache(date, base)
 	if err != nil {
+		if err == errNoRatesDataInCache {
+			rates, err = getHistoricalRatesFromApi(date, base)
+			if err != nil {
+				return nil, err
+			}
+			addRateToCache(date, base, rates)
+			return rates, nil
+		}
 		return nil, err
 	}
-	if len(cacheData) == 0 {
-		// check if the correct currency was passed
-		if !common.CurrencyExists(base) {
-			return nil, errIncorrectBaseCurrency
-		}
-		rates, err := getHistoricalRates(timestamp, base)
-		if err != nil {
-			return nil, err
-		}
-		redisRates := make(map[string]interface{})
-		for k, v := range rates {
-			redisRates[k] = interface{}(v)
-		}
-		redisPipe := redisClient.Pipeline()
-		redisPipe.HMSet(redisCacheKey, redisRates)
-		redisPipe.Expire(redisCacheKey, 10*time.Minute)
-		if _, err := redisPipe.Exec(); err != nil {
-			return nil, err
-		}
-		return rates, nil
-	}
-	result := make(map[string]float64)
-	for k, v := range cacheData {
-		f, err := strconv.ParseFloat(v, 64)
-		if err != nil {
-			return nil, err
-		}
-		result[k] = f
-	}
-	return result, nil
+	return rates, nil
 }

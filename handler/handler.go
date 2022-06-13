@@ -62,9 +62,9 @@ func DiffHandler(w http.ResponseWriter, r *http.Request) {
 		err error
 	)
 	if todayCourse > yesterdayCourse {
-		gif, err = tenor.GetRandomGif("rich", 100)
+		gif, err = tenor.GetRandomGif("rich")
 	} else {
-		gif, err = tenor.GetRandomGif("broke", 100)
+		gif, err = tenor.GetRandomGif("broke")
 	}
 	if err != nil {
 		log.Println(err)

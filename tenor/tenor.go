@@ -196,6 +196,7 @@ func getGifById(gifId string) (*Gif, error) {
 }
 
 func GetRandomGif(searchQuery string) (*Gif, error) {
+	searchQuery = strings.ReplaceAll(searchQuery, " ", "+")
 	gifId, err := getRandomGifId(searchQuery)
 	if err != nil {
 		return nil, err

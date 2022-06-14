@@ -33,7 +33,10 @@ var Config = new(ServiceConfig)
 func init() {
 	confContent, err := os.ReadFile("config/config.json")
 	if err != nil {
-		log.Fatal(err)
+		confContent, err = os.ReadFile("../config/config.json")
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 	if err := json.Unmarshal(confContent, Config); err != nil {
 		log.Fatal(err)

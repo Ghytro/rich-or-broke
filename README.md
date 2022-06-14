@@ -44,6 +44,7 @@ All of the config parameters are necessary for the service.
 7. Build Docker image of the application: ```docker build -t rich_or_broke .```
 8. Start container with application in created subnet: ```docker run -it -p 8080:8080 --name rich_or_broke --network mynet --ip 172.18.0.22 --rm rich_or_broke```
 9. Server logs will be printed in stdout if "verbose" was enabled in config.
+10. Press Ctrl+C to stop the service, then stop the container with Redis when you're done, it will be removed automatically if you specified ```--rm``` flag when launching the container: ```docker stop rich_or_broke_cache```
 
 ### Build from scratch (needs Go compiler and Redis server to be installed)
 - Install and start Redis server: [installation guide](https://redis.io/docs/getting-started/)

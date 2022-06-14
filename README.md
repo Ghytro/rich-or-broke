@@ -6,6 +6,11 @@ Mini-project, a service that returns a gif corresponding to the currencies rate 
 
 ```value_id``` - a parameter with id of the currency. Full list of currencies ids according to ISO 4217 can be found [here](https://en.wikipedia.org/wiki/ISO_4217#Active_codes)
 
+## Tech stack & implementation details
+The service itself is written in Go, Redis is used for caching requests to external APIs. The service can work without Redis, but responses will be sufficiently slower because of the requests to the external services. Some of the requests are performed in asynchronous way, but it is still slower than getting requests cache from Redis.
+
+Currencies rates from [openexchangerates](https://openexchangerates.org/) are updated in cache once in 10 minutes, cached gifs from [tenor](https://tenor.com/) are updated once a day.
+
 ## Configuration
 Configuration file is stored in [config/config.json](https://github.com/Ghytro/rich-or-broke/tree/main/config/config.json). The configuration file must be of the following format:
 ```json

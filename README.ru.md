@@ -1,0 +1,56 @@
+# Rich or Broke (Тестовое задание от Альфа банка)
+Читать на других языках: [English](https://github.com/Ghytro/rich-or-broke/blob/main/README.ru.md)
+## Краткое описание
+Мини-проект: сервис, возвращающий гифку в соответствии с изменением курса валют. Если курс относительно доллара поднялся, сервис возвращает случайную гифку из раздела "rich", иначе случайную гифку из раздела "broke". Все запросы обрабатываются по URL следующего формата:
+
+```https://rich-or-broke.org/api/diff/{value_id}```
+
+```value_id``` - параметр с трехбуквенным идентификатором валюты. Полный список идентификаторов валют в соответствии со стандартом ISO 4217 смотреть [здесь](https://ru.wikipedia.org/wiki/ISO_4217#Active_codes)
+
+## Стек и детали реализации
+Сервис написан на Go, Redis используется для кеширования запросов к внешним API. Сервис может работать и без Redis, но обработка запросов будет занимать существенно больше времени из за запросов во внешние API. Некоторые запросы выполняются асинхронно, но получение данных из Redis все равно быстрее.
+
+Данные по валютам из [openexchangerates](https://openexchangerates.org/) обновляются в кеше каждые 10 минут, кешированые гифки из [tenor](https://tenor.com/) обновляются ежедневно.
+
+## Конфигурация
+Конфигурационный файл находится в [config/config.json](https://github.com/Ghytro/rich-or-broke/tree/main/config/config.json). Файл должен быть следующего формата:
+```json
+{
+    "verbose": true,
+    "port": 8080,
+    "openexchange_api_token": "open exchange api token",
+    "openexchange_base_url": "https://openexchangerates.org/api/",
+    "tenor_api_token": "tenor api token",
+    "tenor_base_url": "https://g.tenor.com/v1/",
+    "tenor_media_storage_base_url": "https://media.tenor.com/images/",
+    "tenor_search_query_limit": 100,
+    "redis_client_options": {
+        "db": 0,
+        "addr": "127.0.0.1:6379",
+        "password": ""
+    },
+    "base_currency_id": "USD"
+}
+```
+Наличие всех перечисленных в шаблоне параметров обязательно для работы сервиса.
+
+## Сборка и запуск
+### (Рекомендуется) Сборка Docker-образа и запуск в контейнере (необходимо иметь установленный Docker)
+1. Установите Docker-образ Redis: ```docker pull redis```
+2. Создайте в Docker новую подсеть: ```docker network create mynet --subnet=172.18.0.0/16```. Вы можете указать адрес, маску и название сети какое хотите. В этом примере сеть будет называться 'mynet' и использовать адрес 172.18.0.0/16.
+3. Запустите контейнер с Redis в созданной сети: ```docker run -d -p 6379:6379 --network mynet --ip 172.18.0.23 --name rich_or_broke_cache --rm redis```
+4. Клонируйте репозиторий с приложением по https: ```git clone https://github.com/Ghytro/rich-or-broke.git```
+5. Перейдите в корень репозитория и укажите в конфигурационном файле адрес сервера с Redis, на котором вы запустили контейнер в шаге 3 (ключ "addr" в объекте "redis_client_options").
+6. Укажите остальные параметры в конфигурационном файле, такие как порт, на котором вы хотите запустить приложение (по умолчанию 8080) или токены для доступа к API openexchange и tenor.
+7. Соберите Docker-образ приложения: ```docker build -t rich_or_broke .```
+8. Запустите контейнер с приложением в созданной сети: ```docker run -it -p 8080:8080 --name rich_or_broke --network mynet --ip 172.18.0.22 --rm rich_or_broke```
+9. Логи сервера будут выводиться в stdout, если вы указали ```"verbose": true``` в конфигурационном файле сервиса.
+10. Нажмите Ctrl+C, чтобы остановить сервиса, затем остановите контейнер с Redis, он будет удален автоматически, если флаг ```--rm``` был указан при запуске контейнера: ```docker stop rich_or_broke_cache```
+
+### Сборка с нуля (необходимо иметь установленный компилятор Go и Redis Server)
+- Установите и запустите сервер с Redis: [installation guide](https://redis.io/docs/getting-started/)
+- Соберите и запустите исполняемый файл с сервисом
+    1. Клонируйте git репозиторий по https: ```git clone https://github.com/Ghytro/rich-or-broke.git```
+    2. Перейдите в корень модуля и соберите исполняемый файл (вы можете указать наименование исполняемого файла при помощи флага ```-o```): ```cd rich-or-broke && go build -o executable```
+    3. Укажите параметры сервиса в конфигурационном файле config/config.json
+    4. Запустите исполняемый файл, когда Redis будет готов: ```./executable```

@@ -1,4 +1,5 @@
 # Rich or Broke (Alfa Bank test task)
+Read this in other languages: [Русский](https://github.com/Ghytro/rich-or-broke/blob/main/README.ru.md)
 ## Brief description
 Mini-project, a service that returns a gif corresponding to the currencies rate change. If the rate of currency raised, compared to yesterday, the service returns a random "rich" gif, otherwise returns "broke" gif. All of the requests are handled on the endpoint of the following format:
 
@@ -31,7 +32,7 @@ Configuration file is stored in [config/config.json](https://github.com/Ghytro/r
     "base_currency_id": "USD"
 }
 ```
-All of the config parameters are necessary for the service.
+Precense of all the config parameters is necessary to run the service.
 
 ## How to launch
 ### (Recommended) Build docker image and launch in container (needs Docker to be installed)

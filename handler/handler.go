@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Ghytro/ab_interview/common"
 	"github.com/Ghytro/ab_interview/openexchange"
 	"github.com/Ghytro/ab_interview/tenor"
 
@@ -20,14 +21,15 @@ func init() {
 }
 
 func DiffHandler(w http.ResponseWriter, r *http.Request) {
+	common.LogIfVerbose("incoming request to " + r.URL.Path)
 	today := time.Now()
 	yesterday := today.Add(-24 * time.Hour)
 	chanYesterdayCourse := make(chan float64)
 	chanTodayCourse := make(chan float64)
 	chanError := make(chan error)
 	currency := mux.Vars(r)["currency_id"]
-	f := func(t time.Time, c chan float64) {
-		m, err := openexchange.HistoricalRates(t, "USD")
+	getHistoricalRates := func(t time.Time, c chan float64) {
+		m, err := openexchange.HistoricalRates(t)
 		if err != nil {
 			log.Println(err)
 			chanError <- err
@@ -42,8 +44,8 @@ func DiffHandler(w http.ResponseWriter, r *http.Request) {
 		chanError <- nil
 		c <- val
 	}
-	go f(today, chanTodayCourse)
-	go f(yesterday, chanYesterdayCourse)
+	go getHistoricalRates(today, chanTodayCourse)
+	go getHistoricalRates(yesterday, chanYesterdayCourse)
 	for i := 0; i < 2; i++ {
 		err := <-chanError
 		if err != nil {

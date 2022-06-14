@@ -99,18 +99,32 @@ func getSearchQueryGifIdsFromApi(searchQuery string) ([]string, error) {
 }
 
 func getRandomGifId(searchQuery string) (string, error) {
+	if !common.IsRedisAvailable() {
+		gifIds, err := getSearchQueryGifIdsFromApi(searchQuery)
+		common.LogIfVerbose("tenor.getRandomGifId: redis not available, falling back to api")
+		return gifIds[rand.Intn(len(gifIds))], err
+	}
 	gifId, err := getRandomGifIdFromCache(searchQuery)
 	if err != nil {
-		if err == errNoGifIdsInCache || common.IsBadRedisConnectionErr(err) {
+		switch {
+		case common.IsBadRedisConnectionErr(err):
+			common.SetRedisUnavailable()
+			gifIds, err := getSearchQueryGifIdsFromApi(searchQuery)
+			common.LogIfVerbose("tenor.getRandomGifId: bad connection with redis, setting unavailable")
+			return gifIds[rand.Intn(len(gifIds))], err
+		case err == errNoGifIdsInCache:
 			gifIds, err := getSearchQueryGifIdsFromApi(searchQuery)
 			if err != nil {
 				return "", err
 			}
 			addGifIdsToCache(searchQuery, gifIds...)
+			common.LogIfVerbose("tenor.getRandomGifId: no gif ids in cache for the query, adding")
 			return gifIds[rand.Intn(len(gifIds))], nil
+		default:
+			return "", err
 		}
-		return "", err
 	}
+	common.LogIfVerbose("tenor.getRandomGifId: returning gif id from cache")
 	return gifId, nil
 }
 
@@ -155,6 +169,7 @@ func getGifByIdFromTenorApi(gifId string) (*Gif, error) {
 
 func getGifById(gifId string) (*Gif, error) {
 	if !common.IsRedisAvailable() {
+		common.LogIfVerbose("tenor.getGifById: redis not available, falling back to api")
 		return getGifByIdFromTenorApi(gifId)
 	}
 	gif, err := getGifByIdFromCache(gifId)
@@ -162,18 +177,21 @@ func getGifById(gifId string) (*Gif, error) {
 		switch {
 		case common.IsBadRedisConnectionErr(err):
 			common.SetRedisUnavailable()
+			common.LogIfVerbose("tenor.getGifById: bad connection with redis, setting unavailable")
 			return getGifByIdFromTenorApi(gifId)
-		case err == errNoGifIdsInCache:
+		case err == errNoGifInCache:
 			gif, err = getGifByIdFromTenorApi(gifId)
 			if err != nil {
 				return nil, err
 			}
 			addGifToCache(gifId, gif)
+			common.LogIfVerbose("tenor.getGifById: no gif found in cache with this id, adding")
 			return gif, nil
 		default:
 			return nil, err
 		}
 	}
+	common.LogIfVerbose("tenor.getGifById: returning gif from cache")
 	return gif, nil
 }
 

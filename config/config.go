@@ -19,6 +19,7 @@ type ServiceConfig struct {
 	TenorSearchQueryLimit    int               `json:"tenor_search_query_limit"`
 	RedisClientOptions       RedisClientConfig `json:"redis_client_options"`
 	BaseCurrencyId           string            `json:"base_currency_id"`
+	IsVerbose                bool              `json:"verbose"`
 }
 
 type RedisClientConfig struct {

@@ -8,7 +8,7 @@
     "tenor_search_query_limit": 100,
     "redis_client_options": {
         "db": 0,
-        "addr": "127.0.0.1:6379",
+        "addr": "172.18.0.16:6379",
         "password": ""
     },
     "base_currency_id": "USD"

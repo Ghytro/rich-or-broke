@@ -1,0 +1,26 @@
+version: '3'
+services:
+  rich-or-broke:
+    build: .
+    container_name: rich-or-broke-service
+    ports:
+      - "8080:8080" # change the port if you modify port in config
+    networks:
+      net:
+        ipv4_address: 172.18.0.15
+    depends_on:
+      - redis
+  redis:
+    image: redis
+    ports:
+      - "6379:6379" # port should match port in config
+    networks:
+      net:
+        ipv4_address: 172.18.0.16 # addr should match redis addr in config
+networks:
+  net:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.18.0.0/16

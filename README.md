@@ -37,7 +37,11 @@ Configuration file is stored in [config/config.json](https://github.com/Ghytro/r
 Precense of all the config parameters is necessary to run the service.
 
 ## How to launch
-### (Recommended) Build docker image and launch in container (needs Docker to be installed)
+### (recommended) Docker-compose
+1. After specifying all the configuration parameters, start docker compose from the root of repo: ```docker-compose up -d```
+Do not specify ```-d``` flag if you want the service to put all the logs to stdout. The service will be available at 172.18.0.15:8080 (if you didn't change the port in config).
+2. Remove all the containers and created docker network when you're done: ```docker-compose down```
+### Build docker image and launch in container (needs Docker to be installed)
 1. Install Redis Docker image: ```docker pull redis```
 2. Create Docker subnet: ```docker network create mynet --subnet=172.18.0.0/16```. You can specify any address/mask and name of network you want. In this example network named 'mynet' with address 172.18.0.0/16 will be used.
 3. Start container with Redis in created subnet: ```docker run -d -p 6379:6379 --network mynet --ip 172.18.0.23 --name rich_or_broke_cache --rm redis```
